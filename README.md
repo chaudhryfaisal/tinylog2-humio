@@ -17,17 +17,6 @@ Configuration
 
 The following configuration settings are supported by `tinylog2-humio`:
 
-    private Set<LogEntryValue> requiredLogEntryValues;
-    private Map<String, Object> staticFields;
-
-    private int batchActions = BatchProcessor.DEFAULT_ACTION_SIZE;
-    private int batchFlushInterval = BatchProcessor.DEFAULT_FLUSH_INTERVAL;
-    private int batchBufferLimit = BatchProcessor.DEFAULT_BATCH_SIZE;
-    private int batchJitterInterval = BatchProcessor.DEFAULT_JITTER_INTERVAL;
-    private String serverEndpoint = Humio.DEFAULT_HOST_NAME;
-    private String serverUri = Humio.DEFAULT_PATH;
-    private String serverToken;
-
 * `serverEndpoint` (default: `https://cloud.humio.com`)
   * humio server endpoint
   * this value can also be override by `-DHUMIO_SERVER_ENDPOINT` or `HUMIO_SERVER_ENDPOINT` as ENVIRONMENT variable
