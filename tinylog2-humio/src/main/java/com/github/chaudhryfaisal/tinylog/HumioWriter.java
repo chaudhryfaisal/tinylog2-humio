@@ -7,6 +7,7 @@ import com.github.chaudhryfaisal.dto.EventPayload;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.tinylog.core.LogEntry;
 import org.tinylog.core.LogEntryValue;
 import org.tinylog.writers.Writer;
@@ -27,7 +28,9 @@ import java.util.stream.Collectors;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public final class HumioWriter implements Writer {
+    private static HumioWriter INSTANCE = null;
     private static final String FIELD_SEPARATOR = ",";
     private static final String FIELD_VALUE_SEPARATOR = ":";
     private static final EnumSet<LogEntryValue> BASIC_LOG_ENTRY_VALUES = EnumSet.of(
@@ -41,14 +44,21 @@ public final class HumioWriter implements Writer {
     private Set<LogEntryValue> requiredLogEntryValues;
     private Map<String, Object> staticFields;
 
+    @Builder.Default
     private int batchActions = BatchProcessor.DEFAULT_ACTION_SIZE;
+    @Builder.Default
     private int batchFlushInterval = BatchProcessor.DEFAULT_FLUSH_INTERVAL;
+    @Builder.Default
     private int batchBufferLimit = BatchProcessor.DEFAULT_BATCH_SIZE;
+    @Builder.Default
     private int batchJitterInterval = BatchProcessor.DEFAULT_JITTER_INTERVAL;
+    @Builder.Default
     private String serverEndpoint = Humio.DEFAULT_HOST_NAME;
+    @Builder.Default
     private String serverUri = Humio.DEFAULT_PATH;
     private String serverToken;
-
+    @Builder.Default
+    private boolean debug = false;
 
     public static String prop(String key, String _def) {
         String ret = System.getProperty(key, _def);
@@ -59,21 +69,25 @@ public final class HumioWriter implements Writer {
     }
 
     public HumioWriter(Map<String, String> p) {
-        hostname = buildHostName(p.getOrDefault("hostname", prop("HUMIO_HOSTNAME", "")));
+        hostname = buildHostName(prop("HUMIO_HOSTNAME", p.getOrDefault("hostname", "")));
         requiredLogEntryValues = buildLogEntryValuesFromString(p.getOrDefault("additionalLogEntryValues", "EXCEPTION"));
         staticFields = buildStaticFields(p.getOrDefault("staticFields", ""));
 
-        batchActions = Integer.parseInt(p.getOrDefault("batchActions", String.valueOf(batchActions)));
-        batchFlushInterval = Integer.parseInt(p.getOrDefault("batchFlushInterval", String.valueOf(batchFlushInterval)));
-        batchBufferLimit = Integer.parseInt(p.getOrDefault("batchBufferLimit", String.valueOf(batchBufferLimit)));
-        batchJitterInterval = Integer.parseInt(p.getOrDefault("batchJitterInterval", String.valueOf(batchJitterInterval)));
-        serverEndpoint = p.getOrDefault("serverEndpoint", prop("HUMIO_SERVER_ENDPOINT", serverEndpoint));
-        serverToken = p.getOrDefault("serverToken", prop("HUMIO_SERVER_TOKEN", ""));
-        serverUri = p.getOrDefault("uri", serverUri);
-
+        debug = Boolean.parseBoolean(prop("HUMIO_DEBUG", p.getOrDefault("debug", "false")));
+        batchActions = Integer.parseInt(prop("HUMIO_BATCH_ACTIONS", p.getOrDefault("batchActions", String.valueOf(BatchProcessor.DEFAULT_ACTION_SIZE))));
+        batchFlushInterval = Integer.parseInt(prop("HUMIO_FLUSH_INTERVAL", p.getOrDefault("batchFlushInterval", String.valueOf(BatchProcessor.DEFAULT_FLUSH_INTERVAL))));
+        batchBufferLimit = Integer.parseInt(prop("HUMIO_BUFFER_LIMIT", p.getOrDefault("batchBufferLimit", String.valueOf(BatchProcessor.DEFAULT_BATCH_SIZE))));
+        batchJitterInterval = Integer.parseInt(prop("HUMIO_JITTER_INTERVAL", p.getOrDefault("batchJitterInterval", String.valueOf(BatchProcessor.DEFAULT_JITTER_INTERVAL))));
+        serverEndpoint = prop("HUMIO_SERVER_ENDPOINT", p.getOrDefault("serverEndpoint", Humio.DEFAULT_HOST_NAME));
+        serverToken = prop("HUMIO_SERVER_TOKEN", p.getOrDefault("serverToken", ""));
+        serverUri = p.getOrDefault("uri", Humio.DEFAULT_PATH);
+        if (debug) {
+            System.out.printf("HUMIO: %s", this.toString());
+        }
         if (serverToken.length() == 0) {
             throw new RuntimeException("serverToken is required");
         }
+        INSTANCE = this;
     }
 
     private Map<String, Object> buildStaticFields(String fields) {
@@ -164,11 +178,13 @@ public final class HumioWriter implements Writer {
     private synchronized BatchProcessor<EventPayload, Event> getProcessor() {
         if (processor == null) {
             processor = BatchProcessor.<EventPayload, Event>builder()
+                    .debug(debug)
                     .actions(batchActions)
                     .flushInterval(batchFlushInterval)
                     .bufferLimit(batchBufferLimit)
                     .jitterInterval(batchJitterInterval)
                     .sink(new HumioSink(Humio.builder()
+                            .debug(debug)
                             .endpoint(serverEndpoint)
                             .token(serverToken)
                             .uri(serverUri)
@@ -196,6 +212,12 @@ public final class HumioWriter implements Writer {
 //        VMShutdownHook.unregister(this);
         if (processor != null) {
             processor.close();
+        }
+    }
+
+    public static void FLUSH() {
+        if (INSTANCE != null) {
+            INSTANCE.flush();
         }
     }
 }

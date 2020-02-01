@@ -23,19 +23,19 @@
 
     <groupId>com.github.chaudhryfaisal</groupId>
     <artifactId>tinylog2-humio</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.3</version>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>com.github.chaudhryfaisal</groupId>
             <artifactId>humio-java-client</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.2</version>
         </dependency>
         <dependency>
             <groupId>com.github.chaudhryfaisal</groupId>
             <artifactId>stream-batch-interval</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.2</version>
         </dependency>
 
         <dependency>
